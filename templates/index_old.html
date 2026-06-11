@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Классификатор обращений в техподдержку</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ────────────── ПЕРЕМЕННЫЕ ────────────── */
+    :root {
+      --bg:          #0a0e1a;
+      --surface:     #111827;
+      --surface2:    #1a2236;
+      --border:      #1e2d45;
+      --accent:      #3b82f6;
+      --accent2:     #6366f1;
+      --text:        #e2e8f0;
+      --muted:       #64748b;
+      --success:     #10b981;
+      --danger:      #ef4444;
+      --warning:     #f59e0b;
+      --radius:      12px;
+      --radius-lg:   20px;
+      --transition:  0.25s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ────────────── СБРОС И БАЗОВЫЕ СТИЛИ ────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Фоновая сетка */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+    }
+
+    /* ────────────── ШАПКА ────────────── */
+    header {
+      position: relative; z-index: 10;
+      padding: 32px 40px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 20px;
+    }
+
+    .logo {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      font-family: 'Unbounded', sans-serif;
+      font-size: clamp(14px, 2vw, 20px);
+      font-weight: 600;
+      letter-spacing: -.02em;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+      font-weight: 400;
+    }
+
+    .badge {
+      margin-left: auto;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(16,185,129,.15);
+      color: var(--success);
+      border: 1px solid rgba(16,185,129,.3);
+      letter-spacing: .04em;
+    }
+
+    /* ────────────── ОСНОВНОЙ КОНТЕЙНЕР ────────────── */
+    .container {
+      position: relative; z-index: 5;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* ────────────── КАРТОЧКИ ────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+    }
+
+    .card-title {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    /* ────────────── TEXTAREA + КНОПКА ────────────── */
+    .input-wrap { position: relative; }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      transition: border-color var(--transition);
+      outline: none;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    .char-count {
+      text-align: right;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px 24px;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .03em;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      transition: opacity var(--transition), transform var(--transition);
+    }
+    .btn:hover:not(:disabled) { opacity: .85; transform: translateY(-1px); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ────────────── БЫСТРЫЕ ПРИМЕРЫ ────────────── */
+    .examples-label {
+      font-size: 11px; color: var(--muted); margin-top: 16px; margin-bottom: 8px;
+    }
+    .examples-grid {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .example-chip {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all var(--transition);
+      background: transparent;
+    }
+    .example-chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(59,130,246,.08);
+    }
+
+    /* ────────────── РЕЗУЛЬТАТ ────────────── */
+    .result-placeholder {
+      min-height: 340px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .result-placeholder .big-icon { font-size: 48px; opacity: .4; }
+
+    /* Главный результат */
+    .result-main {
+      display: none;
+    }
+
+    .result-header {
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 20px;
+      padding: 20px;
+      border-radius: var(--radius);
+      border: 1px solid;
+    }
+
+    .result-icon { font-size: 36px; flex-shrink: 0; }
+
+    .result-category {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .result-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .confidence-badge {
+      margin-left: auto;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* Плашка «Передать оператору» */
+    .human-alert {
+      display: none;
+      margin-bottom: 16px;
+      padding: 14px 18px;
+      background: rgba(245,158,11,.1);
+      border: 1px solid rgba(245,158,11,.3);
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--warning);
+      line-height: 1.5;
+    }
+
+    /* Список вероятностей */
+    .prob-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .prob-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .prob-icon { font-size: 16px; width: 22px; text-align: center; }
+    .prob-name { font-size: 12px; color: var(--muted); width: 210px; flex-shrink: 0; }
+    .prob-bar-wrap {
+      flex: 1;
+      height: 8px;
+      background: var(--surface2);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .prob-bar {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    }
+    .prob-pct {
+      font-size: 12px; font-weight: 600;
+      width: 40px; text-align: right;
+    }
+
+    /* ────────────── СТАТИСТИКА ────────────── */
+    .stats-card {
+      grid-column: 1 / -1;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .stat-box {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .stat-value {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* ────────────── ЛОАДЕР ────────────── */
+    .loader {
+      display: none;
+      align-items: center; justify-content: center;
+      min-height: 340px;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ────────────── АДАПТИВНОСТЬ ────────────── */
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; padding: 24px 16px 60px; }
+      .stats-card { grid-column: 1; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      header { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ШАПКА -->
+<header>
+  <div class="logo">🤖</div>
+  <div>
+    <h1>Классификатор обращений в техподдержку</h1>
+    <div class="subtitle">Нейросеть на TensorFlow / Keras · 7 категорий · Автоматическая маршрутизация</div>
+  </div>
+  <div class="badge" id="model-status">⬤ Модель активна</div>
+</header>
+
+<div class="container">
+
+  <!-- ЛЕВАЯ КОЛОНКА: ввод -->
+  <div class="card">
+    <div class="card-title">Введите обращение</div>
+
+    <div class="input-wrap">
+      <textarea id="input-text"
+        placeholder="Например: Не могу войти в аккаунт, пароль не подходит..."
+        maxlength="1000"
+        oninput="updateCharCount()"></textarea>
+    </div>
+    <div class="char-count"><span id="char-count">0</span> / 1000</div>
+
+    <button class="btn" id="classify-btn" onclick="classify()">
+      Классифицировать обращение
+    </button>
+
+    <div class="examples-label">Быстрые примеры:</div>
+    <div class="examples-grid" id="examples-grid">
+      <!-- Заполняется через JS -->
+    </div>
+  </div>
+
+  <!-- ПРАВАЯ КОЛОНКА: результат -->
+  <div class="card">
+    <div class="card-title">Результат классификации</div>
+
+    <!-- Заглушка до первого запроса -->
+    <div class="result-placeholder" id="result-placeholder">
+      <div class="big-icon">📋</div>
+      <div>Введите текст обращения слева<br>и нажмите кнопку</div>
+    </div>
+
+    <!-- Лоадер -->
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Результат -->
+    <div class="result-main" id="result-main">
+      <!-- Плашка оператора -->
+      <div class="human-alert" id="human-alert">
+        ⚠️ <strong>Низкая уверенность модели.</strong><br>
+        Обращение передаётся живому оператору для ручной обработки.
+      </div>
+
+      <!-- Главный блок с категорией -->
+      <div class="result-header" id="result-header">
+        <div class="result-icon" id="result-icon">🔧</div>
+        <div>
+          <div class="result-category" id="result-category">Технические проблемы</div>
+          <div class="result-meta" id="result-meta">уверенность: 94%</div>
+        </div>
+        <div class="confidence-badge" id="confidence-badge">94%</div>
+      </div>
+
+      <!-- Вероятности по всем категориям -->
+      <div class="card-title" style="margin-bottom:14px">Вероятности по категориям</div>
+      <div class="prob-list" id="prob-list"></div>
+    </div>
+  </div>
+
+  <!-- СТАТИСТИКА (нижняя строка) -->
+  <div class="card stats-card">
+    <div class="card-title">Статистика сессии</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="stat-total" style="color:var(--accent)">0</div>
+        <div class="stat-label">Всего запросов</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-auto" style="color:var(--success)">0</div>
+        <div class="stat-label">Авто-обработано</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-human" style="color:var(--warning)">0</div>
+        <div class="stat-label">Переданы оператору</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-pct" style="color:var(--muted)">—</div>
+        <div class="stat-label">% к оператору</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// Быстрые примеры
+// ─────────────────────────────────────────────────────────────────
+const EXAMPLES = [
+  {label: "🔧 Техническая", text: "Приложение вылетает при запуске, ошибка 500"},
+  {label: "💳 Оплата",      text: "С карты дважды списали оплату за этот месяц"},
+  {label: "👤 Аккаунт",     text: "Не могу войти в аккаунт, забыл пароль"},
+  {label: "💡 Функция",     text: "Добавьте пожалуйста тёмную тему оформления"},
+  {label: "⚠️ Жалоба",      text: "Оператор был груб и совсем не помог решить проблему"},
+  {label: "🔒 Безопасность", text: "Подозреваю, что мой аккаунт взломали злоумышленники"},
+  {label: "📖 Консультация", text: "Как создать первый проект в вашей системе"},
+  {label: "❓ Неясное",     text: "Есть вопрос"},
+];
+
+const grid = document.getElementById("examples-grid");
+EXAMPLES.forEach(ex => {
+  const chip = document.createElement("button");
+  chip.className = "example-chip";
+  chip.textContent = ex.label;
+  chip.onclick = () => {
+    document.getElementById("input-text").value = ex.text;
+    updateCharCount();
+  };
+  grid.appendChild(chip);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Счётчик символов
+// ─────────────────────────────────────────────────────────────────
+function updateCharCount() {
+  const len = document.getElementById("input-text").value.length;
+  document.getElementById("char-count").textContent = len;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Классификация
+// ─────────────────────────────────────────────────────────────────
+async function classify() {
+  const text = document.getElementById("input-text").value.trim();
+  if (!text) { alert("Введите текст обращения"); return; }
+
+  // Показываем лоадер
+  document.getElementById("result-placeholder").style.display = "none";
+  document.getElementById("result-main").style.display = "none";
+  document.getElementById("loader").style.display = "flex";
+  document.getElementById("classify-btn").disabled = true;
+
+  try {
+    const resp = await fetch("/classify", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text})
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      alert(err.error || "Ошибка сервера");
+      return;
+    }
+
+    const data = await resp.json();
+    renderResult(data);
+    updateStats();
+
+  } catch(e) {
+    alert("Ошибка соединения с сервером. Убедитесь, что app.py запущен.");
+  } finally {
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("classify-btn").disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Отрисовка результата
+// ─────────────────────────────────────────────────────────────────
+function renderResult(data) {
+  // Плашка оператора
+  const humanAlert = document.getElementById("human-alert");
+  humanAlert.style.display = data.needs_human ? "block" : "none";
+
+  // Шапка результата
+  const header = document.getElementById("result-header");
+  header.style.borderColor = data.needs_human ? "rgba(245,158,11,.3)" : data.color + "66";
+  header.style.background   = data.needs_human ? "rgba(245,158,11,.06)"
+                                               : hexToRgba(data.color, 0.06);
+
+  document.getElementById("result-icon").textContent     = data.needs_human ? "🙋" : data.icon;
+  document.getElementById("result-category").textContent = data.needs_human
+    ? "Передать оператору"
+    : data.category_name;
+  document.getElementById("result-category").style.color = data.needs_human
+    ? "var(--warning)"
+    : data.color;
+
+  document.getElementById("result-meta").textContent =
+    `уверенность: ${data.confidence_pct}%  ·  ${data.timestamp}`;
+
+  const badge = document.getElementById("confidence-badge");
+  badge.textContent = data.confidence_pct + "%";
+  badge.style.background = data.needs_human
+    ? "rgba(245,158,11,.15)" : hexToRgba(data.color, 0.15);
+  badge.style.color = data.needs_human ? "var(--warning)" : data.color;
+
+  // Список вероятностей
+  const list = document.getElementById("prob-list");
+  list.innerHTML = "";
+  data.all_probabilities.forEach(p => {
+    const row = document.createElement("div");
+    row.className = "prob-row";
+    row.innerHTML = `
+      <div class="prob-icon">${p.icon}</div>
+      <div class="prob-name">${p.category_name}</div>
+      <div class="prob-bar-wrap">
+        <div class="prob-bar" style="width:0%;background:${p.color}"></div>
+      </div>
+      <div class="prob-pct" style="color:${p.color}">${p.percentage}%</div>
+    `;
+    list.appendChild(row);
+    // Анимация после вставки в DOM
+    requestAnimationFrame(() => {
+      row.querySelector(".prob-bar").style.width = p.percentage + "%";
+    });
+  });
+
+  document.getElementById("result-main").style.display = "block";
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Обновление статистики
+// ─────────────────────────────────────────────────────────────────
+async function updateStats() {
+  try {
+    const r = await fetch("/api/stats");
+    const s = await r.json();
+    const auto = s.total_requests - s.redirected_to_human;
+
+    document.getElementById("stat-total").textContent  = s.total_requests;
+    document.getElementById("stat-auto").textContent   = auto;
+    document.getElementById("stat-human").textContent  = s.redirected_to_human;
+    document.getElementById("stat-pct").textContent    =
+      s.total_requests > 0 ? s.human_redirect_pct + "%" : "—";
+  } catch(e) { /* игнорируем ошибки статистики */ }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Утилита: hex → rgba
+// ─────────────────────────────────────────────────────────────────
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Enter → отправить
+document.getElementById("input-text").addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.ctrlKey) classify();
+});
+</script>
+</body>
+</html>
