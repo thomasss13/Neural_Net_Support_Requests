@@ -12,6 +12,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 from model import predict_with_confidence
 from dataset import CATEGORY_LABELS
+from presentation_data import SLIDES, GLOSSARY
 
 # ИНИЦИАЛИЗАЦИЯ FLASK-ПРИЛОЖЕНИЯ
 app = Flask(__name__)
@@ -51,7 +52,11 @@ CATEGORY_META = {
 # МАРШРУТЫ
 @app.route("/")
 def index():
-    return render_template("index.html", categories=CATEGORY_META)
+    return render_template(
+        "index.html",
+        categories=CATEGORY_META,
+        num_slides=len(SLIDES),
+    )
 
 
 @app.route("/classify", methods=["POST"])
@@ -151,6 +156,47 @@ def get_examples():
         "ambiguous": "Есть вопрос",
     }
     return jsonify(examples)
+
+
+# ПРЕЗЕНТАЦИЯ И ГЛОССАРИЙ ТЕРМИНОВ
+@app.route("/api/presentation")
+def get_presentation():
+    """
+    Отдаёт метаданные всех слайдов курсовой презентации: заголовок,
+    путь к изображению (static/presentation/<image>) и связанные с
+    этим слайдом термины (со ссылками на статьи для углубления).
+    """
+    slides = []
+    for slide in SLIDES:
+        terms = [
+            {"id": term_id, **GLOSSARY[term_id]}
+            for term_id in slide["terms"]
+            if term_id in GLOSSARY
+        ]
+        slides.append({
+            "number":   slide["number"],
+            "section":  slide["section"],
+            "title":    slide["title"],
+            "subtitle": slide["subtitle"],
+            "image":    f"/static/presentation/{slide['image']}",
+            "terms":    terms,
+        })
+
+    return jsonify({
+        "total":  len(slides),
+        "slides": slides,
+    })
+
+
+@app.route("/api/glossary")
+def get_glossary():
+    """Полный глоссарий терминов, использованных в проекте и презентации."""
+    terms = [
+        {"id": term_id, **data}
+        for term_id, data in GLOSSARY.items()
+    ]
+    terms.sort(key=lambda t: t["name"])
+    return jsonify({"total": len(terms), "terms": terms})
 
 
 # ЗАПУСК СЕРВЕРА

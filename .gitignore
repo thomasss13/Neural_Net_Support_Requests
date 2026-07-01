@@ -1,0 +1,11 @@
+# виртуальное окружение
+venv/
+
+# кеш и байткод Python
+__pycache__/
+*.pyc
+
+# служебные файлы IDE/ОС
+.vscode/
+.idea/
+Thumbs.db
